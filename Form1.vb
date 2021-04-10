@@ -1,199 +1,105 @@
 ﻿Imports Oracle.DataAccess.Client
+Imports Telerik.WinControls.UI
+
 Public Class Form1
     Dim Ora_Con As New OracleConnection
+    Dim Ora_Ada As New OracleDataAdapter
     Dim type As String
-    Dim Query As String = String.Empty
+    'Dim Query As String = String.Empty
+
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Ora_Con.ConnectionString = ("Data source=(DESCRIPTION = (ADDRESS_LIST = (ADDRESS = (PROTOCOL = TCP)(HOST = MOUNTAIN)(PORT = 1521)))(CONNECT_DATA = (SERVICE_NAME = MOUNTAIN)));user id=TESTDB;password=TESTDB;pooling=false")
         Ora_Con.Open()
-        Dim dt As New DataTable
+        RG_VIEW()
 
-        Query = "select productid,productname,qty from item1 where productid <> '0'"
-        Using Cmd As New OracleCommand(Query, Ora_Con)
-            Using Ora_Ada As New OracleDataAdapter(Cmd)
+    End Sub
+
+    Private Sub btnsave_Click(sender As Object, e As EventArgs) Handles btnsave.Click
+        Dim Query As String = String.Empty
+        Dim Result As Long = 0
+        ' Dim dt3 As New DataTable
+        For Each GROW As GridViewRowInfo In RG1.Rows
+            Dim seq As Object = Nothing
+            Query = ("insert into STU1 (STUDENT_ID,STUDENT_NAME,DEPARTMENT) values (seqn.nextval,'" & GROW.Cells("STUDENT_NAME").Value & "','" & GROW.Cells("DEPARTMENT").Value & "')")
+            Using Cmd As New OracleCommand(Query, Ora_Con)
+                Result = Cmd.ExecuteNonQuery()
+            End Using
+        Next
+        If Result > 0 Then
+            MsgBox("insert succesfully")
+            RG_VIEW()
+            ' Me.Hide()
+        Else
+            MsgBox("insert failed")
+        End If
+    End Sub
+
+    Private Sub btnconfrm_Click(sender As Object, e As EventArgs) Handles btnconfrm.Click
+        Dim Query As String = String.Empty
+        Dim Result As Long = 0
+        Dim dt As New DataTable
+        Dim STUDENT_ID As Double
+        Dim RESULTCOUNT As Double
+        Dim RESULTUPDATE As Double
+        Dim dt2 As New DataTable
+        RESULTCOUNT = 0
+        Query = "Select distinct STUDENT_ID_FK from STUDETAILS where  ADDRESS <> ' ' or MOBILENO <> 0 "
+        Using cmd As New OracleCommand(Query, Ora_Con)
+            Using Ora_Ada As New OracleDataAdapter(cmd)
+                Ora_Ada.Fill(dt2)
+            End Using
+        End Using
+        For Each GROW As GridViewRowInfo In RG2.Rows
+            If GROW.Cells("address").Value.ToString <> "" Or GROW.Cells("mobileno").Value.ToString <> "" Then
+                For Each dtrow As DataRow In dt2.Rows
+                    If GROW.Cells("STUDENT_ID").Value.ToString = dtrow("STUDENT_ID_FK").ToString Then
+                        STUDENT_ID = 1
+                    End If
+                Next
+                If STUDENT_ID = 0 Then
+                    Query = "insert into STUDETAILS(STUDENT_ID_FK,STUDENT_NAME,Department,address,mobileno) values(" & GROW.Cells("STUDENT_ID").Value & ",'" & GROW.Cells("STUDENT_NAME").Value & "','" & GROW.Cells("department").Value & "','" & GROW.Cells("address").Value & "','" & GROW.Cells("mobileno").Value & "') "
+                    Using Cmd As New OracleCommand(Query, Ora_Con)
+                        Result = Cmd.ExecuteNonQuery()
+                        RESULTCOUNT = RESULTCOUNT + 1
+                    End Using
+                Else
+                    Query = "UPDATE STUDETAILS set address = '" & GROW.Cells("address").Value & "',mobileno = '" & GROW.Cells("mobileno").Value & "' where STUDENT_ID_FK = " & GROW.Cells("STUDENT_ID").Value.ToString & ""
+                    Using cmd As New OracleCommand(Query, Ora_Con)
+                        Result = cmd.ExecuteNonQuery()
+                        RESULTUPDATE = RESULTUPDATE + 1
+                    End Using
+                    STUDENT_ID = 0
+                End If
+            End If
+        Next
+        If RESULTCOUNT > 0 Then
+            MsgBox("inserted  successful")
+            RG_VIEW()
+            Me.Close()
+        ElseIf RESULTUPDATE > 0 Then
+            MsgBox("update succesfully")
+            RG_VIEW()
+            Me.Close()
+        Else
+            MsgBox(" failed")
+        End If
+
+    End Sub
+
+    Private Sub RG_VIEW()
+        Dim query As String = String.Empty
+        Dim dt As New DataTable
+        query = "SELECT * FROM STU1 T1 LEFT OUTER JOIN STUDETAILS T2 ON STUDENT_ID =STUDENT_ID_FK"
+        Using cmd As New OracleCommand(query, Ora_Con)
+            Using Ora_Ada As New OracleDataAdapter(cmd)
                 Ora_Ada.Fill(dt)
             End Using
-
         End Using
-        Cboid.DataSource = dt
-        Cboid.DisplayMember = "productid"
-        Cboid.ValueMember = "productid"
-        Cboid.Focus()
-        Cboid.DroppedDown = True
-
-
+        RG2.DataSource = dt
     End Sub
 
-
-    Private Sub txtid_KeyDown_1(sender As Object, e As KeyEventArgs) Handles txtid.KeyDown
-        If e.KeyCode = Keys.Enter Then
-            txtname.Focus()
-        End If
-    End Sub
-
-    Private Sub txtname_KeyDown(sender As Object, e As KeyEventArgs) Handles txtname.KeyDown
-        If e.KeyCode = Keys.Enter Then
-            Cbobox.Focus()
-
-
-            'Cbobox.DataSource = dt
-            'Cbobox.DisplayMember = "GENDER"
-            'Cbobox.Focus()
-            'Cbobox.DroppedDown = True
-
-            Cbobox.Items.Add("GRAM")
-            Cbobox.Items.Add("KG")
-            Cbobox.Items.Add("LITTRE")
-
-        End If
-    End Sub
-
-    Private Sub Cbobox_KeyDown(sender As Object, e As KeyEventArgs) Handles Cbobox.KeyDown
-        If e.KeyCode = Keys.Enter Then
-            txtprice.Focus()
-        End If
-    End Sub
-
-    Private Sub txtprice_KeyDown(sender As Object, e As KeyEventArgs) Handles txtprice.KeyDown
-        If e.KeyCode = Keys.Enter Then
-            txtgst.Focus()
-        End If
-    End Sub
-
-    Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
-        Dim Query As String = String.Empty
-        Dim Result As Long = 0
-        Query = ("Insert into item1(productid,productname,qty,price,gst) Values ('" & txtid.Text & "','" & txtname.Text & "','" & Cbobox.Text & "','" & txtprice.Text & "','" & txtgst.Text & "')")
-        Using Cmd As New OracleCommand(Query, Ora_Con)
-            Result = Cmd.ExecuteNonQuery()
-        End Using
-        If Result > 0 Then
-            MsgBox("Save Successful")
-            type = ""
-        Else
-            MsgBox("Failed")
-        End If
-    End Sub
-
-
-
-    Private Sub txtgst_Leave(sender As Object, e As EventArgs) Handles txtgst.Leave
-
-        Try
-            txtGstP_Amount.Text = (Convert.ToDecimal(txtprice.Text / 100) * Convert.ToDecimal(txtgst.Text)).ToString()
-            txttot.Text = (Convert.ToDecimal(txtprice.Text) + Convert.ToDecimal(txtGstP_Amount.Text)).ToString()
-        Catch ex As Exception
-
-        End Try
-
-
-    End Sub
-
-    Private Sub Button3_Click(sender As Object, e As EventArgs) Handles btnclr.Click
-        txtid.Text = ""
-        txtname.Text = ""
-        Cbobox.Text = ""
-        txtprice.Text = ""
-        txtgst.Text = ""
-        txttot.Text = ""
-        txtGstP_Amount.Text = ""
-
-    End Sub
-
-    Private Sub Button4_Click(sender As Object, e As EventArgs) Handles btnext.Click
-        Me.Close()
-    End Sub
-
-    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles btnview.Click
-        Dim dt As New DataTable
-        Dim Query As String = String.Empty
-        Dim Result As Long = 0
-        Query = ("Select  productid,productname,qty,price,gst from item1 where productid <> 0 order by Productid")
-        'Query = ("select from item1 where productid=106")
-        Using Cmd As New OracleCommand(Query, Ora_Con)
-            Using ora_ada As New OracleDataAdapter(Cmd)
-                ora_ada.Fill(dt)
-            End Using
-        End Using
-        GV1.DataSource = dt
-        GV1.BestFitColumns()
-    End Sub
-
-    Private Sub ComboBox1_KeyDown(sender As Object, e As KeyEventArgs) Handles Cboid.KeyDown
-        Dim Dt1 As New DataTable
-        If e.KeyCode = Keys.Enter Then ' Keys.Up Or e.KeyCode = Keys.Down Then
-            Query = ("select productname,qty,price,gst from item1 where Productid ='" & Cboid.SelectedValue & "'")
-            Using Cmd As New OracleCommand(Query, Ora_Con)
-                Using Ora_Ada As New OracleDataAdapter(Cmd)
-                    Ora_Ada.Fill(Dt1)
-                End Using
-            End Using
-            txtname.Text = Dt1.Rows(0)("productname")
-            Cbobox.Text = Dt1.Rows(0)("qty")
-            txtprice.Text = Dt1.Rows(0)("price")
-            txtgst.Focus()
-        End If
-    End Sub
-
-    Private Sub NEWBTN_Click(sender As Object, e As EventArgs) Handles Button5.Click
-
-        txtid.Visible = True
-        Cboid.Visible = False
-        type = "new "
-
-    End Sub
-
-    Private Sub BTNMDY_KeyDown(sender As Object, e As KeyEventArgs) Handles BTNMDY.KeyDown
-        'Dim Query As String = String.Empty
-        'Dim Result As Long = 0
-        'Query = ("update  ITEM1 set productname =  '" & txtname.Text & "',qty='" & Cbobox.Text & "',price = '" & txtprice.Text & "',gst='" & txtgst.Text & "'where productid=" & Cboid.SelectedValue & "")
-        'Using Cmd As New OracleCommand(Query, Ora_Con)
-        '    Result = Cmd.ExecuteNonQuery()
-        'End Using
-
-        'If Result > 0 Then
-        '    MsgBox("Update Successful")
-        '    type = ""
-        'Else
-        '    MsgBox("Update Failed")
-        'End If
-    End Sub
-
-
-
-    Private Sub btmd(sender As Object, e As EventArgs) Handles BTNMDY.Click
-        Dim Query As String = String.Empty
-        Dim Result As Long = 0
-        Query = ("update  ITEM1 set productname =  '" & txtname.Text & "',qty='" & Cbobox.Text & "',price = '" & txtprice.Text & "',gst='" & txtgst.Text & "'where productid=" & Cboid.SelectedValue & "")
-        Using Cmd As New OracleCommand(Query, Ora_Con)
-            Result = Cmd.ExecuteNonQuery()
-        End Using
-
-        If Result > 0 Then
-            MsgBox("Update Successful")
-            type = ""
-        Else
-            MsgBox("Update Failed")
-        End If
-        txtid.Visible = False
-        Cboid.Visible = True
-    End Sub
-
-    Private Sub delete_Click(sender As Object, e As EventArgs) Handles delete.Click
-        Dim Query As String = String.Empty
-        Dim Result As Long = 0
-        Query = "delete from item1 where productid=" & Cboid.SelectedValue & ""
-        Using cmd As New OracleCommand(Query, Ora_Con)
-            Result = cmd.ExecuteNonQuery()
-        End Using
-        If Result > 0 Then
-            MsgBox("deleted Successful")
-            type = ""
-        Else
-            MsgBox("Deletion Failed")
-        End If
-        txtid.Visible = False
-        Cboid.Visible = True
+    Private Sub BtnReport_Click(sender As Object, e As EventArgs) Handles BtnReport.Click
+        Report.Show()
     End Sub
 End Class
